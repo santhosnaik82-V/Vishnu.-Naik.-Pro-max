@@ -26,8 +26,7 @@ jobs:
       - name: Check source ZIP
         run: |
           if [ ! -f source.zip ]; then
-            echo "ERROR: source.zip was not found in the repository root."
-            echo "Repository files:"
+            echo "ERROR: source.zip not found in repository root."
             ls -la
             exit 1
           fi
@@ -36,20 +35,20 @@ jobs:
         run: |
           mkdir -p source
           unzip -q source.zip -d source
-          echo "Extracted files:"
+          echo "Files extracted:"
           find source -maxdepth 4 -type f | head -100
 
       - name: Find Gradle project
         id: project
         run: |
-          PROJECT_DIR="$(find source -type f -name gradlew -print -quit | xargs -r dirname)"
+          PROJECT_DIR="$(find source -type f -name gradlew -print -quit)"
           if [ -z "$PROJECT_DIR" ]; then
             echo "ERROR: No gradlew found in source.zip."
-            echo "The ZIP must contain a complete Android Gradle project."
             exit 1
           fi
-          echo "dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
+          PROJECT_DIR="$(dirname "$PROJECT_DIR")"
           chmod +x "$PROJECT_DIR/gradlew"
+          echo "dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
 
       - name: Build debug APK
         run: |
@@ -63,22 +62,3 @@ jobs:
           path: ${{ steps.project.outputs.dir }}/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 7
-
-This workflow expects `source.zip` to be in the **repository root** and to contain a complete Android project with a `gradlew` file. The Gradle Wrapper is the recommended way to run a Gradle build.
-
-## Step 2: Save and run
-
-1. Tap **Commit changes**.
-2. Open **Actions**.
-3. Open **Build VISHNU PRO MAX APK**.
-4. Wait for the run to finish.
-
-## Step 3: Download the APK
-
-If the workflow succeeds:
-
-1. Open the successful run.
-2. Scroll to **Artifacts**.
-3. Tap **VISHNU-PRO-MAX-APK** to download it.
-
-**Important:** This fixes the workflow's folder handling and updates the Java/checkout actions, but it cannot guarantee a successful build if `source.zip` is missing, incomplete, or contains incompatible Android code. If it fails again, send me the new error log so we can fix the actual cause.
