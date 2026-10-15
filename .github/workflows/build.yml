@@ -17,48 +17,47 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Install Java
+      - name: Set up Java
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Check source ZIP
+      - name: Check project files
         run: |
+          echo "Repository contents:"
+          ls -la
           if [ ! -f source.zip ]; then
-            echo "ERROR: source.zip not found in repository root."
-            ls -la
+            echo "ERROR: source.zip is missing from the repository root."
             exit 1
           fi
 
-      - name: Extract Android project
+      - name: Extract project
         run: |
           mkdir -p source
           unzip -q source.zip -d source
-          echo "Files extracted:"
-          find source -maxdepth 4 -type f | head -100
 
-      - name: Find Gradle project
-        id: project
+      - name: Locate Gradle Wrapper
+        id: locate
+        shell: bash
         run: |
-          PROJECT_DIR="$(find source -type f -name gradlew -print -quit)"
-          if [ -z "$PROJECT_DIR" ]; then
-            echo "ERROR: No gradlew found in source.zip."
+          WRAPPER="$(find source -type f -name gradlew -print -quit)"
+          if [ -z "$WRAPPER" ]; then
+            echo "ERROR: No gradlew file found in source.zip."
             exit 1
           fi
-          PROJECT_DIR="$(dirname "$PROJECT_DIR")"
-          chmod +x "$PROJECT_DIR/gradlew"
-          echo "dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
+          PROJECT_DIR="$(dirname "$WRAPPER")"
+          chmod +x "$WRAPPER"
+          echo "project_dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
 
-      - name: Build debug APK
+      - name: Build APK
         run: |
-          cd "${{ steps.project.outputs.dir }}"
+          cd "${{ steps.locate.outputs.project_dir }}"
           ./gradlew --no-daemon assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: VISHNU-PRO-MAX-APK
-          path: ${{ steps.project.outputs.dir }}/app/build/outputs/apk/debug/*.apk
+          path: ${{ steps.locate.outputs.project_dir }}/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
-          retention-days: 7
